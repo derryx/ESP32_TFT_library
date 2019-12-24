@@ -22,6 +22,19 @@
 #include "tftspi.h"
 #include "tft.h"
 
+#ifdef DEFAULT_SPIFFS_LIB
+  #include "spiffs_vfs.h"
+#else
+  #define SPIFFS_BASE_PATH "/spiffs"
+  #include "esp_log.h"
+  #include "esp_spiffs.h"
+  
+  static uint8_t spiffs_is_mounted = 1;
+  static const char *TAG = "TFT DEMO";
+  
+#endif
+
+
 #ifdef CONFIG_EXAMPLE_USE_WIFI
 
 #include "esp_wifi.h"
@@ -387,18 +400,18 @@ static void disp_images() {
 
 	if (spiffs_is_mounted) {
 		// ** Show scaled (1/8, 1/4, 1/2 size) JPG images
-		TFT_jpg_image(CENTER, CENTER, 3, SPIFFS_BASE_PATH"/images/test1.jpg", NULL, 0);
+		TFT_jpg_image(CENTER, CENTER, 3, SPIFFS_BASE_PATH"/test1.jpg", NULL, 0);
 		Wait(500);
 
-		TFT_jpg_image(CENTER, CENTER, 2, SPIFFS_BASE_PATH"/images/test2.jpg", NULL, 0);
+		TFT_jpg_image(CENTER, CENTER, 2, SPIFFS_BASE_PATH"/test2.jpg", NULL, 0);
 		Wait(500);
 
-		TFT_jpg_image(CENTER, CENTER, 1, SPIFFS_BASE_PATH"/images/test4.jpg", NULL, 0);
+		TFT_jpg_image(CENTER, CENTER, 1, SPIFFS_BASE_PATH"/test4.jpg", NULL, 0);
 		Wait(500);
 
 		// ** Show full size JPG image
 		tstart = clock();
-		TFT_jpg_image(CENTER, CENTER, 0, SPIFFS_BASE_PATH"/images/test3.jpg", NULL, 0);
+		TFT_jpg_image(CENTER, CENTER, 0, SPIFFS_BASE_PATH"/test3.jpg", NULL, 0);
 		tstart = clock() - tstart;
 		if (doprint) printf("       JPG Decode time: %u ms\r\n", tstart);
 		sprintf(tmp_buff, "Decode time: %u ms", tstart);
@@ -409,14 +422,21 @@ static void disp_images() {
 		update_header("BMP IMAGE", "");
 		for (int scale=5; scale >= 0; scale--) {
 			tstart = clock();
-			TFT_bmp_image(CENTER, CENTER, scale, SPIFFS_BASE_PATH"/images/tiger.bmp", NULL, 0);
+			TFT_bmp_image(CENTER, CENTER, scale, SPIFFS_BASE_PATH"/tiger.bmp", NULL, 0);
 			tstart = clock() - tstart;
 			if (doprint) printf("    BMP time, scale: %d: %u ms\r\n", scale, tstart);
-			sprintf(tmp_buff, "Decode time: %u ms", tstart);
+			sprintf(tmp_buff, "Decode time: %u ms, %d", tstart, scale);
 			update_header(NULL, tmp_buff);
 			Wait(-500);
 		}
+    /*tstart = clock();
+    TFT_bmp_image(CENTER, CENTER, 0, SPIFFS_BASE_PATH"/tiger.bmp", NULL, 0);
+    tstart = clock() - tstart;
+    if (doprint) printf("    BMP time, scale: %d: %u ms\r\n", 0, tstart);
+    sprintf(tmp_buff, "Decode time: %u ms", tstart);
+    update_header(NULL, tmp_buff);*/
 		Wait(-GDEMO_INFO_TIME);
+
 	}
 	else if (doprint) printf("  No file system found.\r\n");
 }
@@ -921,7 +941,7 @@ static void poly_demo()
 			TFT_drawPolygon(x, y, sides[i], r, TFT_BLACK, TFT_BLACK, oldrot, 1);
 			TFT_drawPolygon(x, y, sides[i], r, color[i], color[i], rot, 1);
 			r -= 16;
-            if (r <= 0) break;
+      if (r <= 0) break;
 			n += 2;
 		}
 		Wait(100);
@@ -943,7 +963,7 @@ static void poly_demo()
 		for (i=5; i>=0; i--) {
 			TFT_drawPolygon(x, y, sides[i], r, color[i], fill[i], rot, 2);
 			r -= 16;
-            if (r <= 0) break;
+      if (r <= 0) break;
 			n += 2;
 		}
 		Wait(500);
@@ -1012,7 +1032,7 @@ void tft_demo() {
 	font_forceFixed = 0;
 	TFT_resetclipwin();
 
-	image_debug = 0;
+	image_debug = 1;
 
     char dtype[16];
     
@@ -1059,7 +1079,7 @@ void tft_demo() {
 	sprintf(tmp_buff, "Read speed: %5.2f MHz", (float)max_rdclock/1000000.0);
 	TFT_print(tmp_buff, CENTER, LASTY+tempy);
 
-	Wait(4000);
+	Wait(1000);
 
 	while (1) {
 		if (run_gs_demo) {
@@ -1095,7 +1115,7 @@ void tft_demo() {
 		disp_header("Welcome to ESP32");
 
 		test_times();
-		font_demo();
+		/*font_demo();
 		line_demo();
 		aline_demo();
 		rect_demo();
@@ -1104,9 +1124,9 @@ void tft_demo() {
 		arc_demo();
 		triangle_demo();
 		poly_demo();
-		pixel_demo();
+		pixel_demo();*/
 		disp_images();
-		touch_demo();
+		//touch_demo();
 
 		_demo_pass++;
 	}
@@ -1238,6 +1258,41 @@ void test_sd_card(void)
 */
 
 
+void init_spiffs() {
+  ESP_LOGI(TAG, "Initializing SPIFFS");
+
+  esp_vfs_spiffs_conf_t conf = {
+    .base_path = "/spiffs",
+    .partition_label = NULL,
+    .max_files = 5,
+    .format_if_mount_failed = false
+  };
+
+  // Use settings defined above to initialize and mount SPIFFS filesystem.
+  // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
+  esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+  if (ret != ESP_OK) {
+      if (ret == ESP_FAIL) {
+          ESP_LOGE(TAG, "Failed to mount or format filesystem");
+      } else if (ret == ESP_ERR_NOT_FOUND) {
+          ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+      } else {
+          ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+      }
+      return;
+  }
+
+  size_t total = 0, used = 0;
+  ret = esp_spiffs_info(NULL, &total, &used);
+  if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+  } else {
+      ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+  }
+}
+
+
 //=============
 void app_main()
 {
@@ -1250,8 +1305,8 @@ void app_main()
 
     // ===================================================
     // ==== Set display type                         =====
-    tft_disp_type = DEFAULT_DISP_TYPE;
-	//tft_disp_type = DISP_TYPE_ILI9341;
+    // tft_disp_type = DEFAULT_DISP_TYPE;
+	tft_disp_type = DISP_TYPE_ILI9341;
 	//tft_disp_type = DISP_TYPE_ILI9488;
 	//tft_disp_type = DISP_TYPE_ST7735B;
     // ===================================================
@@ -1445,15 +1500,20 @@ void app_main()
 	TFT_print("Initializing SPIFFS...", CENTER, CENTER);
     // ==== Initialize the file system ====
     printf("\r\n\n");
+#ifdef DEFAULT_SPIFFS_LIB    
 	vfs_spiffs_register();
-    if (!spiffs_is_mounted) {
-    	_fg = TFT_RED;
-    	TFT_print("SPIFFS not mounted !", CENTER, LASTY+TFT_getfontheight()+2);
+  if (!spiffs_is_mounted) {
+      _fg = TFT_RED;
+      TFT_print("SPIFFS not mounted !", CENTER, LASTY+TFT_getfontheight()+2);
     }
     else {
-    	_fg = TFT_GREEN;
-    	TFT_print("SPIFFS Mounted.", CENTER, LASTY+TFT_getfontheight()+2);
+      _fg = TFT_GREEN;
+      TFT_print("SPIFFS Mounted.", CENTER, LASTY+TFT_getfontheight()+2);
     }
+#else
+  init_spiffs();
+#endif  
+    
 	Wait(-2000);
 
 	//=========
