@@ -40,14 +40,16 @@
 
 // ** Set the correct configuration for ESP32-WROVER-KIT v3
 // --------------------------------------------------------
-#define DEFAULT_DISP_TYPE           DISP_TYPE_ST7789V
+//#define DEFAULT_DISP_TYPE           DISP_TYPE_ST7789V
+#define DEFAULT_DISP_TYPE           DISP_TYPE_ILI9341
 #define DEFAULT_TFT_DISPLAY_WIDTH   240
 #define DEFAULT_TFT_DISPLAY_HEIGHT  320
 #define DISP_COLOR_BITS_24          0x66
 #define DEFAULT_GAMMA_CURVE         0
 #define DEFAULT_SPI_CLOCK           26000000
 #define TFT_INVERT_ROTATION         0
-#define TFT_INVERT_ROTATION1        1
+//#define TFT_INVERT_ROTATION1        1
+#define TFT_INVERT_ROTATION1        0
 #define TFT_RGB_BGR                 0x00
 
 #define USE_TOUCH	TOUCH_TYPE_NONE
@@ -56,7 +58,8 @@
 #define PIN_NUM_MOSI 23		// SPI MOSI
 #define PIN_NUM_CLK  19		// SPI CLOCK pin
 #define PIN_NUM_CS   22		// Display CS pin
-#define PIN_NUM_DC   21		// Display command/data pin
+//#define PIN_NUM_DC   21		// Display command/data pin
+#define PIN_NUM_DC   33   // Display command/data pin
 #define PIN_NUM_TCS   0		// Touch screen CS pin
 
 #define PIN_NUM_RST  18  	// GPIO used for RESET control
