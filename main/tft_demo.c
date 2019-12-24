@@ -21,7 +21,6 @@
 #include "esp_heap_caps.h"
 #include "tftspi.h"
 #include "tft.h"
-#include "spiffs_vfs.h"
 
 #ifdef CONFIG_EXAMPLE_USE_WIFI
 
